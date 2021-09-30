@@ -2,19 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>JS-Interpreter Demo</title>
-  <link href="demos/style.css" rel="stylesheet" type="text/css">
-
+  <title>JS-Interpreter Serialization Demo</title>
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <script src="../acorn.js"></script>
+  <script src="../interpreter.js"></script>
+  <script src="serialize.js"></script>
   <script>
-    // Depending on the URL argument, test the compressed or uncompressed version.
-    var compressed = (document.location.search == '?compressed');
-    if (compressed) {
-      document.write('<scr'+'ipt src="acorn_interpreter.js"></scr'+'ipt>');
-    } else {
-      document.write('<scr'+'ipt src="acorn.js"></scr'+'ipt>');
-      document.write('<scr'+'ipt src="interpreter.js"></scr'+'ipt>');
-    }
-
     var myInterpreter;
     function initAlert(interpreter, globalObject) {
       var wrapper = function alert(text) {
@@ -28,6 +21,24 @@
       var code = document.getElementById('code').value;
       myInterpreter = new Interpreter(code, initAlert);
       disable('');
+    }
+
+    function serializeButton() {
+      var json = serialize(myInterpreter);
+      document.getElementById('serializeTextarea').value = JSON.stringify(json);
+    }
+
+    function deserializeButton() {
+      var text = document.getElementById('serializeTextarea').value;
+      try {
+        var json = JSON.parse(text);
+      } catch (e) {
+        alert('Invalid JSON\n' + e);
+        return;
+      }
+      // Create a clean interpreter with the same initialization functions.
+      parseButton();
+      deserialize(json, myInterpreter);
     }
 
     function stepButton() {
@@ -61,6 +72,7 @@
     function disable(disabled) {
       document.getElementById('stepButton').disabled = disabled;
       document.getElementById('runButton').disabled = disabled;
+      document.getElementById('serializeButton').disabled = disabled;
     }
 
     function createSelection(start, end) {
@@ -82,43 +94,44 @@
   </script>
 </head>
 <body>
-  <h1>JS-Interpreter Demo</h1>
+  <h1>JS-Interpreter Serialization Demo</h1>
 
-  <p>Enter JavaScript code below, then click <em>Parse</em>.  To execute, either
-  click <em>Step</em> repeatedly, or click <em>Run</em> once.
-  Open your browser's console for errors.</p>
-  <p><textarea id="code" spellcheck="false">
-var result = [];
-function fibonacci(n, output) {
-  var a = 1, b = 1, sum;
-  for (var i = 0; i &lt; n; i++) {
-    output.push(a);
-    sum = a + b;
-    a = b;
-    b = sum;
-  }
+  <p>The intepreter may be stopped at any time, the state serialized, then
+  deserialized at a later time, and the interpreter resumed.  The functions
+  for this are in <a href="serialize.js">serialize.js</a>.</p>
+
+  <ol>
+    <li>Click <em>Parse</em>, then click <em>Step</em> repeatedly.</li>
+    <li>At some point click <em>Serialize</em>.</li>
+    <li>Copy the serialized data structure to the clipboard, reload this page,
+    then paste the data structure back in its text area.</li>
+    <li>Click <em>Deserialize</em>.</li>
+    <li>Continue clicking <em>Step</em> repeatedly, or press <em>Run</em>.</li>
+  </ol>
+  <p>Open your browser's console for errors.</p>
+
+  <p><textarea id="code" style="height: 10em;" spellcheck="false">
+var numbers = [];
+for (var i = 0; i < 3; i++) {
+  numbers.push(i);
 }
-fibonacci(16, result);
-alert(result.join(', '));
+alert(numbers.join('-'));
 </textarea><br>
   <button onclick="parseButton()">Parse</button>
   <button onclick="stepButton()" id="stepButton" disabled="disabled">Step</button>
   <button onclick="runButton()" id="runButton" disabled="disabled">Run</button>
   </p>
 
-  <p><small>
+  <p>
+    <button onclick="serializeButton()" id="serializeButton" disabled="disabled">Serialize &darr;</button>
+    <button onclick="deserializeButton()" id="deserializeButton">Deserialize &uarr;</button><br>
+    <textarea id="serializeTextarea" style="height: 10ex; width: 80ex;" spellcheck="false"></textarea>
+  </p>
+
+  <p>Back to the <a href="../docs.html">JS-Interpreter documentation</a>.</p>
+
   <script>
-    if (compressed) {
-      document.write('[ Running compressed bundle.  Switch to <A HREF="?uncompressed">raw sources</A>. ]');
-    } else {
-      document.write('[ Running raw sources.  Switch to <A HREF="?compressed">compressed bundle</A>. ]');
-    }
     disable('disabled');
   </script>
-  </small></p>
-
-  <p>Read the <a href="docs.html">JS-Interpreter documentation</a>.</p>
-  <p>Get the <a href="https://github.com/NeilFraser/JS-Interpreter">source code</a>.</p>
-
 </body>
 </html>

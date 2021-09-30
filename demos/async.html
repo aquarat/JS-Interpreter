@@ -2,19 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>JS-Interpreter Demo</title>
-  <link href="demos/style.css" rel="stylesheet" type="text/css">
-
+  <title>JS-Interpreter Async Demo</title>
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <script src="../acorn.js"></script>
+  <script src="../interpreter.js"></script>
   <script>
-    // Depending on the URL argument, test the compressed or uncompressed version.
-    var compressed = (document.location.search == '?compressed');
-    if (compressed) {
-      document.write('<scr'+'ipt src="acorn_interpreter.js"></scr'+'ipt>');
-    } else {
-      document.write('<scr'+'ipt src="acorn.js"></scr'+'ipt>');
-      document.write('<scr'+'ipt src="interpreter.js"></scr'+'ipt>');
-    }
-
     var myInterpreter;
     function initAlert(interpreter, globalObject) {
       var wrapper = function alert(text) {
@@ -22,6 +14,19 @@
       };
       interpreter.setProperty(globalObject, 'alert',
           interpreter.createNativeFunction(wrapper));
+
+      var wrapper = function getXhr(href, callback) {
+        var req = new XMLHttpRequest();
+        req.open('GET', href, true);
+        req.onreadystatechange = function() {
+          if (req.readyState == 4 && req.status == 200) {
+            callback(req.responseText);
+          }
+        };
+        req.send(null);
+      };
+      interpreter.setProperty(globalObject, 'getXhr',
+          interpreter.createAsyncFunction(wrapper));
     }
 
     function parseButton() {
@@ -53,8 +58,10 @@
     function runButton() {
       disable('disabled');
       if (myInterpreter.run()) {
-        // Async function hit.  There's more code to run.
-        setTimeout(runButton, 100);
+        // Ran until an async call.  Give this call a chance to run.
+        // Then start running again later.
+        // 1000ms is waaay too long, but is used here to demo the pause.
+        setTimeout(runButton, 1000);
       }
     }
 
@@ -82,43 +89,39 @@
   </script>
 </head>
 <body>
-  <h1>JS-Interpreter Demo</h1>
+  <h1>JS-Interpreter Async Demo</h1>
 
-  <p>Enter JavaScript code below, then click <em>Parse</em>.  To execute, either
-  click <em>Step</em> repeatedly, or click <em>Run</em> once.
-  Open your browser's console for errors.</p>
+  <p>Asynchronous function calls in the real world can be wrapped to appear
+  synchronous to code running in the JS-Interpreter.  The example below
+  (see this page's source) creates a <code>getXhr</code> function that
+  fetches a URL and returns the content.</p>
+
+  <p>This function is defined using <code>createAsyncFunction</code> during
+  initialization.  When called, the interpreter is paused until the callback
+  occurs.  During this paused state, <code>step</code> and <code>run</code>
+  will both do nothing, returning <code>true</code> to indicate that the program
+  still has code to execute.</p>
+
+  <p>Click <em>Parse</em>, then either click <em>Step</em> repeatedly,
+  or click <em>Run</em> once.  Open your browser's console for errors.</p>
+
   <p><textarea id="code" spellcheck="false">
-var result = [];
-function fibonacci(n, output) {
-  var a = 1, b = 1, sum;
-  for (var i = 0; i &lt; n; i++) {
-    output.push(a);
-    sum = a + b;
-    a = b;
-    b = sum;
-  }
-}
-fibonacci(16, result);
-alert(result.join(', '));
+alert(getXhr('async.txt'));
 </textarea><br>
   <button onclick="parseButton()">Parse</button>
   <button onclick="stepButton()" id="stepButton" disabled="disabled">Step</button>
   <button onclick="runButton()" id="runButton" disabled="disabled">Run</button>
   </p>
 
-  <p><small>
+  <p>Back to the <a href="../docs.html">JS-Interpreter documentation</a>.</p>
+
   <script>
-    if (compressed) {
-      document.write('[ Running compressed bundle.  Switch to <A HREF="?uncompressed">raw sources</A>. ]');
-    } else {
-      document.write('[ Running raw sources.  Switch to <A HREF="?compressed">compressed bundle</A>. ]');
-    }
     disable('disabled');
+    if (location.protocol == 'file:' &&
+        navigator.userAgent.indexOf('Firefox') == -1) {
+      alert('Warning: This page is loaded with the "file:" protocol.\n' +
+            'Your browser might prevent XHR from working here.');
+    }
   </script>
-  </small></p>
-
-  <p>Read the <a href="docs.html">JS-Interpreter documentation</a>.</p>
-  <p>Get the <a href="https://github.com/NeilFraser/JS-Interpreter">source code</a>.</p>
-
 </body>
 </html>
